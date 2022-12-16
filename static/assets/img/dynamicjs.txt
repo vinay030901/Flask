@@ -1,0 +1,7 @@
+var html=document.body.innerHTML
+
+var parser=new DOMParser();
+var doc=parser.parseFromString(html,"text/html");
+var json=json.stringify(doc)
+
+what's going on here?
