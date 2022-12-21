@@ -1,0 +1,7 @@
+what will the api will do
+
+1. create stores, each with a name and list of stocked items
+2. create an item within a store, each with a name and a price
+3. retrieve a list of all stores and their items
+4. given is name, retrieve an individual store and its items
+5. given a store name, retrieve a list of item within it.
