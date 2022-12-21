@@ -1,6 +1,5 @@
 from flask import request
 from flask_smorest import abort, Blueprint
-from db import stores
 from flask.views import MethodView
 import uuid
 
@@ -16,6 +15,8 @@ class Store(MethodView):
         try:
             return stores[store_id]
         except KeyError:
+
+            
             # abort-when we finish the application, it will document the application
             abort(404, message="Store not found")
 
