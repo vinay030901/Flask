@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 from flask_smorest import Api
 from flask_jwt_extended import JWTManager
 import models
-
+from blocklist import BLOCKLIST
 from db import db
 from resources.item import blp as ItemBlueprint
 from resources.store import blp as StoreBlueprint
@@ -29,12 +29,24 @@ def create_app(db_url=None):
     app.config["JWT_SECRET_KEY"] = "183224164486160429795538671906166237970"
     jwt = JWTManager(app)
 
-    # jwt claims are used to add extra information to the jwt 
+    # whenver we will recive the jwt, this function will run
+    # it will check the blocklist and if the token is in the blocklist, if it return true
+    # the user will ge the error that the token is revoked
+    # what error message the user will recieve is made by another function
+    @jwt.token_in_blocklist_loader
+    def check_if_token_in_blocklist(jwt_header, jwt_payload):
+        return jwt_payload["jti"] in BLOCKLIST
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        return (jsonify({"description": "The token has been revoked", "error": "token_revoked"}), 401)
+
+    # jwt claims are used to add extra information to the jwt
     # for example, here we are going to give delete privileges to admin only, and our admin is user with id 1
-    # so we will check if the user id is 1 or not 
+    # so we will check if the user id is 1 or not
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):
-        if identity==1:
+        if identity == 1:
             return {"is_admin": True}
         return {"is_admin": False}
 
