@@ -3,6 +3,7 @@ from flask_smorest import Api
 from flask_jwt_extended import JWTManager
 import models
 from blocklist import BLOCKLIST
+from flask_migrate import Migrate
 from db import db
 from resources.item import blp as ItemBlueprint
 from resources.store import blp as StoreBlueprint
@@ -24,10 +25,17 @@ def create_app(db_url=None):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["PROPAGATE_EXCEPTIONS"] = True
     db.init_app(app)
+    migrate = Migrate(app, db)
     api = Api(app)
-
     app.config["JWT_SECRET_KEY"] = "183224164486160429795538671906166237970"
     jwt = JWTManager(app)
+
+    @jwt.needs_fresh_token_loader
+    def token_not_fresh_callback(jwt_header, jwt_payload):
+        return (401, jsonify({
+            "description": "The token is not fresh",
+            "error": "fresh_token_required"
+        }))
 
     # whenver we will recive the jwt, this function will run
     # it will check the blocklist and if the token is in the blocklist, if it return true
@@ -61,9 +69,6 @@ def create_app(db_url=None):
     @jwt.unauthorized_loader
     def missing_token_callback(error):
         return (jsonify({"description": "Request does not contain access token.", "error": "authorization_required"}), 401)
-
-    with app.app_context():
-        db.create_all()
 
     api.register_blueprint(ItemBlueprint)
     api.register_blueprint(StoreBlueprint)

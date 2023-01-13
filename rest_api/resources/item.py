@@ -25,7 +25,7 @@ class Item(MethodView):
         jwt = get_jwt()
         if not jwt.get("is_admin"):
             abort(401, message="Admin privilige required")
-            
+
         item = ItemModel.query.get_or_404(item_id)
         db.session.delete(item)
         db.session.commit()
@@ -58,7 +58,8 @@ class ItemList(MethodView):
     def get(self):
         return ItemModel.query.all()
 
-    @jwt_required()  # this means that we need to login and need access token
+    # this means that we need to login and need access token
+    @jwt_required(fresh=True)
     # arguments means that what type of data we will be getting as json from the user
     @blp.arguments(ItemSchema)
     @blp.response(201, ItemSchema)
