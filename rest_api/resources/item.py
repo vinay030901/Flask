@@ -1,69 +1,73 @@
-from flask import request
-from flask_smorest import abort, Blueprint
 from flask.views import MethodView
-import uuid
-from db import db
+from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
+from flask_jwt_extended import jwt_required, get_jwt
+from db import db
 from models import ItemModel
 from schemas import ItemSchema, ItemUpdateSchema
 
-blp = Blueprint("Items", __name__, description="Operation on items")
+blp = Blueprint("Items", "items", description="Operations on items")
 
 
-class myclass(Exception):
-    def __init__(self, m):
-        self.text = m
-
-    def __str__(self):
-        return self.text
-
-
-@blp.route("/item/<string:item_id>")
+# route means the route through which we will get the request
+@blp.route("/item/<int:item_id>")
 class Item(MethodView):
-    # get the information about the item
+    # respone-  this is whatever we return, 200 is the respone code and we return itemschema object
+    @jwt_required()
     @blp.response(200, ItemSchema)
-    def get(self, item_id):
+    def get(self, item_id):  # we are getting item_id from the user
+        # this is like filtering the item_id and checking if it is correct and then returning the object of it
         item = ItemModel.query.get_or_404(item_id)
         return item
 
-    # delete the item
+    @jwt_required()
     def delete(self, item_id):
+        jwt = get_jwt()
+        if not jwt.get("is_admin"):
+            abort(401, message="Admin privilige required")
+            
         item = ItemModel.query.get_or_404(item_id)
         db.session.delete(item)
         db.session.commit()
-        return {"message": "Item deleted successfully"}
+        return {"message": "Item deleted."}
 
-    # update item
-
+    # arguments means that what type of data we will be getting as json from the user
+    @jwt_required()
     @blp.arguments(ItemUpdateSchema)
-    @blp.response(200, ItemSchema)
+    # respone-  this is whatever we return, 200 is the respone code and we return itemschema object
+    @blp.response(200, ItemSchema)  # reponce should be deeper than arguments
     def put(self, item_data, item_id):
         item = ItemModel.query.get(item_id)
+
         if item:
-            item.price = item_data['price']
-            item.name = item_data['name']
+            item.price = item_data["price"]
+            item.name = item_data["name"]
         else:
             item = ItemModel(id=item_id, **item_data)
+
         db.session.add(item)
         db.session.commit()
+
         return item
 
 
 @blp.route("/item")
 class ItemList(MethodView):
-    # get all items
     @blp.response(200, ItemSchema(many=True))
     def get(self):
         return ItemModel.query.all()
 
-    # create an item
+    @jwt_required()  # this means that we need to login and need access token
+    # arguments means that what type of data we will be getting as json from the user
     @blp.arguments(ItemSchema)
     @blp.response(201, ItemSchema)
     def post(self, item_data):
         item = ItemModel(**item_data)
+
         try:
             db.session.add(item)
             db.session.commit()
         except SQLAlchemyError:
-            abort(404, message="An error has occurred while inserting an item.")
+            abort(500, message="An error occurred while inserting the item.")
+
         return item
